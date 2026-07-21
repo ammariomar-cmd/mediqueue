@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>MediQueue - File d'attente médicale</title>
+  <style>
+    :root {
+      --primary: #0ea5e9;
+      --primary-dark: #0284c7;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif; 
+      background: var(--bg); 
+      color: var(--text); 
+      min-height: 100vh;
+      overscroll-behavior-y: none;
+    }
+    
+    .app-container {
+      max-width: 430px;
+      margin: 0 auto;
+      background: var(--bg);
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .screen {
+      display: none;
+      animation: fadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    .screen.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .screen-content { padding: 16px; }
+
+    /* ===== AUTH ===== */
+    .auth-screen { 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      min-height: 100vh; 
+      padding: 20px; 
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+    }
+    .auth-box { 
+      width: 100%; 
+      max-width: 400px; 
+      background: white; 
+      padding: 36px; 
+      border-radius: 24px; 
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    }
+    .auth-logo { text-align: center; margin-bottom: 24px; }
+    .auth-logo .icon { 
+      width: 64px; height: 64px; border-radius: 20px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px; font-size: 28px;
+      box-shadow: 0 10px 30px rgba(14,165,233,0.3);
+    }
+    .auth-logo h1 { font-size: 22px; font-weight: 800; }
+    .auth-logo p { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+    
+    .auth-tabs {
+      display: flex; gap: 0; margin-bottom: 20px;
+      background: var(--bg); padding: 4px; border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .auth-tab-btn {
+      flex: 1; padding: 10px; border: none; border-radius: 10px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: transparent; color: var(--text-light);
+      transition: all 0.2s;
+    }
+    .auth-tab-btn.active {
+      background: var(--card); color: var(--primary);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; font-size: 11px; font-weight: 700;
+      color: var(--text-light); margin-bottom: 4px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .form-group input {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid var(--border); border-radius: 12px;
+      font-size: 15px; font-family: inherit; background: white;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { outline: none; border-color: var(--primary); }
+    .input-wrap { position: relative; }
+    .input-wrap .toggle-pwd {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; font-size: 18px;
+      cursor: pointer; color: var(--text-light);
+      padding: 6px;
+    }
+
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 14px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center;
+      justify-content: center; gap: 8px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; box-shadow: 0 4px 16px rgba(14,165,233,0.3);
+    }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { background: white; border: 2px solid var(--border); color: var(--text); }
+    .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; }
+
+    /* ===== HEADER ===== */
+    .top-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px 12px;
+      background: var(--bg);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .top-header .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px;
+    }
+    .top-header .greeting { flex: 1; margin-left: 10px; }
+    .top-header .greeting .hi { font-size: 11px; color: var(--text-light); font-weight: 500; }
+    .top-header .greeting .name { font-size: 15px; font-weight: 700; color: var(--text); }
+
+    /* ===== HOME ===== */
+    .home-card {
+      background: var(--card); border-radius: 18px; padding: 18px;
+      border: 1px solid var(--border); margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .home-card .card-title {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-light); margin-bottom: 8px; font-weight: 700;
+    }
+    .home-card .big-number {
+      font-size: 44px; font-weight: 800; color: var(--primary); line-height: 1;
+    }
+    .home-card .sub { color: var(--text-light); font-size: 14px; font-weight: 500; }
+    .home-card .est { margin-top: 10px; font-size: 13px; color: var(--text-light); }
+    .home-card .est strong { color: var(--text); }
+    .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); border-radius: 4px; transition: width 0.6s ease; }
+
+    .quick-actions {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+    }
+    .quick-action {
+      background: var(--card); border-radius: 16px; padding: 20px 16px;
+      border: 1px solid var(--border); text-align: center;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .quick-action:active { transform: scale(0.96); }
+    .quick-action .icon { font-size: 28px; display: block; margin-bottom: 6px; }
+    .quick-action .label { font-size: 13px; font-weight: 600; color: var(--text); }
+
+    /* ===== SCAN ===== */
+    .qr-frame {
+      width: 280px; height: 280px;
+      margin: 16px auto;
+      border: 3px dashed var(--primary);
+      border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+      overflow: hidden;
+    }
+    .qr-frame .scan-line {
+      position: absolute; width: 80%; height: 3px;
+      background: var(--primary); border-radius: 2px;
+      top: 20%; box-shadow: 0 0 16px var(--primary);
+      animation: scanMove 2s ease-in-out infinite;
+    }
+    @keyframes scanMove {
+      0%, 100% { top: 15%; }
+      50% { top: 85%; }
+    }
+    .qr-frame .corner {
+      position: absolute; width: 24px; height: 24px;
+      border: 4px solid var(--primary);
+    }
+    .qr-frame .corner.tl { top: -3px; left: -3px; border-right: none; border-bottom: none; }
+    .qr-frame .corner.tr { top: -3px; right: -3px; border-left: none; border-bottom: none; }
+    .qr-frame .corner.bl { bottom: -3px; left: -3px; border-right: none; border-top: none; }
+    .qr-frame .corner.br { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+    .qr-placeholder { font-size: 56px; opacity: 0.2; }
+
+    .cabinet-card {
+      background: var(--card); border-radius: 16px; padding: 14px;
+      border: 1px solid var(--border); margin-top: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .cabinet-card .icon {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: #dcfce7; display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .cabinet-card .info { flex: 1; }
+    .cabinet-card .info .name { font-weight: 700; font-size: 14px; }
+    .cabinet-card .info .addr { font-size: 11px; color: var(--text-light); }
+    .cabinet-card .badge-ok {
+      background: #dcfce7; color: #166534; padding: 4px 10px;
+      border-radius: 20px; font-size: 10px; font-weight: 700;
+    }
+
+    .scan-success {
+      position: absolute; inset: 0;
+      background: rgba(14,165,233,0.92);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; color: white; z-index: 5;
+      border-radius: 24px;
+    }
+    .scan-success.active { display: flex; animation: fadeIn 0.3s; }
+    .scan-success .check { font-size: 48px; margin-bottom: 8px; }
+    .scan-success p { font-size: 16px; font-weight: 700; margin: 0; }
+
+    /* ===== TICKET ===== */
+    .ticket-display {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white; border-radius: 24px; padding: 32px 20px;
+      text-align: center; margin: 12px 0 16px;
+      box-shadow: 0 12px 40px rgba(14,165,233,0.25);
+      position: relative; overflow: hidden;
+    }
+    .ticket-display .ticket-num {
+      font-size: 64px; font-weight: 900; line-height: 1;
+      letter-spacing: -2px; position: relative; z-index: 1;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .ticket-display .ticket-label {
+      font-size: 13px; opacity: 0.9; margin-top: 8px;
+      font-weight: 500; position: relative; z-index: 1;
+    }
+
+    .position-card {
+      background: var(--card); border-radius: 18px; padding: 18px;
+      border: 1px solid var(--border); margin-bottom: 12px;
+    }
+    .position-card .row {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .position-card .big { font-size: 34px; font-weight: 800; color: var(--primary); line-height: 1; }
+    .position-card .label { font-size: 12px; color: var(--text-light); font-weight: 500; }
+    .position-card .wait-time { font-size: 24px; font-weight: 800; color: var(--warning); }
+
+    .detail-card {
+      background: var(--card); border-radius: 16px; padding: 16px;
+      border: 1px solid var(--border); margin-bottom: 12px;
+    }
+    .detail-card .row {
+      display: flex; justify-content: space-between; padding: 6px 0;
+      font-size: 14px; border-bottom: 1px solid var(--border);
+    }
+    .detail-card .row:last-child { border-bottom: none; }
+    .detail-card .row .key { color: var(--text-light); font-weight: 500; }
+    .detail-card .row .val { color: var(--text); font-weight: 700; }
+
+    .alert-card {
+      background: #fef3c7; border: 1px solid #fbbf24; border-radius: 16px;
+      padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .alert-card .bell { font-size: 20px; }
+    .alert-card .txt { font-size: 13px; color: #92400e; font-weight: 600; }
+    .alert-card .txt small { font-weight: 500; opacity: 0.7; display: block; margin-top: 2px; font-size: 11px; }
+
+    /* ===== HISTORY ===== */
+    .history-item {
+      display: flex; align-items: center; padding: 12px 14px;
+      border-radius: 12px; margin-bottom: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+    }
+    .history-item .num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--text-light); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 12px; margin-right: 10px; flex-shrink: 0;
+    }
+    .history-item .info { flex: 1; }
+    .history-item .info .name { font-weight: 600; font-size: 13px; color: var(--text); }
+    .history-item .info .meta { font-size: 11px; color: var(--text-light); margin-top: 1px; }
+    .history-item .badge-done {
+      background: #dcfce7; color: #166534; padding: 3px 8px;
+      border-radius: 20px; font-size: 10px; font-weight: 700;
+    }
+    .history-item .badge-cancel {
+      background: #fee2e2; color: #991b1b; padding: 3px 8px;
+      border-radius: 20px; font-size: 10px; font-weight: 700;
+    }
+
+    /* ===== PROFILE ===== */
+    .profile-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-size: 30px; font-weight: 700; margin: 0 auto 12px;
+    }
+
+    /* ===== BOTTOM NAV ===== */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      background: rgba(255,255,255,0.96); backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-around;
+      padding: 6px 0 max(12px, env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+    .nav-item {
+      text-align: center; font-size: 10px; color: var(--text-light);
+      font-weight: 600; cursor: pointer; padding: 4px 12px; border-radius: 10px;
+      transition: all 0.2s; border: none; background: none;
+    }
+    .nav-item.active { color: var(--primary); background: #e0f2fe; }
+    .nav-item .icon { font-size: 20px; display: block; margin-bottom: 1px; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--card); border-radius: 20px;
+      padding: 24px; width: 100%; max-width: 320px;
+      text-align: center; animation: modalIn 0.3s ease;
+    }
+    @keyframes modalIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-box .icon { font-size: 40px; margin-bottom: 8px; }
+    .modal-box h3 { margin: 0 0 6px; font-size: 17px; }
+    .modal-box p { margin: 0 0 16px; font-size: 13px; color: var(--text-light); }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns .btn { margin: 0; }
+
+    .toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      background: var(--text); color: white;
+      padding: 12px 24px; border-radius: 12px;
+      font-size: 13px; font-weight: 600;
+      opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 300; white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      max-width: 90vw;
+      text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.warning { background: var(--warning); }
+
+    .empty-state { text-align: center; padding: 30px; color: var(--text-light); }
+    .empty-state .icon { font-size: 32px; margin-bottom: 6px; opacity: 0.4; }
+    .empty-state p { font-size: 13px; font-weight: 500; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 480px) {
+      .auth-box { padding: 24px; }
+      .qr-frame { width: 220px; height: 220px; }
+      .ticket-display .ticket-num { font-size: 48px; }
+      .quick-actions { grid-template-columns: 1fr 1fr; }
+      .position-card .big { font-size: 28px; }
+      .position-card .wait-time { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ==================== AUTH ==================== -->
+  <div id="screen-auth" class="screen active">
+    <div class="auth-screen">
+      <div class="auth-box">
+        <div class="auth-logo">
+          <div class="icon">🏥</div>
+          <h1>MediQueue</h1>
+          <p>File d'attente médicale simplifiée</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" onclick="switchAuthTab('login')">🔐 Connexion</button>
+          <button class="auth-tab-btn" onclick="switchAuthTab('register')">📝 S'inscrire</button>
+        </div>
+
+        <!-- LOGIN -->
+        <div id="auth-login" class="auth-panel active">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="login-email" placeholder="exemple@email.com" value="patient@test.fr">
+          </div>
+          <div class="form-group">
+            <label>Mot de passe</label>
+            <div class="input-wrap">
+              <input type="password" id="login-password" placeholder="••••••••" value="password123">
+              <button class="toggle-pwd" onclick="togglePwd('login-password')">👁️</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="handleLogin()">🔐 Se connecter</button>
+        </div>
+
+        <!-- REGISTER -->
+        <div id="auth-register" class="auth-panel">
+          <div class="form-group">
+            <label>Nom complet *</label>
+            <input type="text" id="reg-name" placeholder="Jean Dupont">
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" id="reg-email" placeholder="exemple@email.com">
+          </div>
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="tel" id="reg-phone" placeholder="06 12 34 56 78">
+          </div>
+          <div class="form-group">
+            <label>Mot de passe * (8 caractères min)</label>
+            <div class="input-wrap">
+              <input type="password" id="reg-password" placeholder="••••••••">
+              <button class="toggle-pwd" onclick="togglePwd('reg-password')">👁️</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirmer le mot de passe *</label>
+            <div class="input-wrap">
+              <input type="password" id="reg-password2" placeholder="••••••••">
+              <button class="toggle-pwd" onclick="togglePwd('reg-password2')">👁️</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="handleRegister()">📝 Créer mon compte</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HOME ==================== -->
+  <div id="screen-home" class="screen">
+    <div class="top-header">
+      <div class="avatar" id="home-avatar">JD</div>
+      <div class="greeting">
+        <div class="hi">Bonjour</div>
+        <div class="name" id="home-name">Jean Dupont</div>
+      </div>
+    </div>
+    <div class="screen-content">
+      <div class="home-card">
+        <div class="card-title">File d'attente actuelle</div>
+        <div style="display:flex; align-items:baseline; gap:8px;">
+          <span class="big-number" id="home-queue-count">0</span>
+          <span class="sub">personnes en attente</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="home-progress" style="width:0%"></div></div>
+        <div class="est">⏱ Temps d'attente estimé : <strong id="home-wait">0 min</strong></div>
+      </div>
+
+      <div class="quick-actions">
+        <div class="quick-action" onclick="goToScan()">
+          <span class="icon">📷</span>
+          <span class="label">Scanner QR</span>
+        </div>
+        <div class="quick-action" onclick="goToTicket()">
+          <span class="icon">🎫</span>
+          <span class="label">Mon ticket</span>
+        </div>
+      </div>
+
+      <div class="home-card">
+        <div class="card-title">Mes visites récentes</div>
+        <div id="home-history">
+          <div class="empty-state">
+            <div class="icon">📋</div>
+            <p>Aucune visite récente</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCAN ==================== -->
+  <div id="screen-scan" class="screen">
+    <div class="top-header">
+      <div class="avatar" id="scan-avatar">JD</div>
+      <div class="greeting">
+        <div class="hi">Scanner</div>
+        <div class="name">QR Code</div>
+      </div>
+      <button onclick="goToHome()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div class="screen-content">
+      <p style="text-align:center;font-size:13px;color:var(--text-light);margin-bottom:12px;">
+        Placez le QR code du cabinet dans le cadre
+      </p>
+
+      <div class="qr-frame" id="qr-frame">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <div class="scan-line"></div>
+        <div class="qr-placeholder">📷</div>
+        <div class="scan-success" id="scan-success">
+          <div class="check">✅</div>
+          <p>Cabinet détecté !</p>
+        </div>
+      </div>
+
+      <button class="btn btn-outline" onclick="simulateScan()" style="margin-top:8px;">
+        📱 Simuler un scan (démo)
+      </button>
+
+      <div id="scan-cabinet" style="display:none;">
+        <div class="cabinet-card">
+          <div class="icon">🏥</div>
+          <div class="info">
+            <div class="name" id="scan-cabinet-name">Dr. Martin</div>
+            <div class="addr" id="scan-cabinet-addr">12 Rue de la Santé, 75014 Paris</div>
+          </div>
+          <span class="badge-ok">✓ Détecté</span>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="form-group">
+            <label>Motif de consultation</label>
+            <select id="scan-reason" style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-family:inherit;background:white;">
+              <option value="">Choisir un motif...</option>
+              <option value="Consultation generale">Consultation générale</option>
+              <option value="Renouvellement ordonnance">Renouvellement ordonnance</option>
+              <option value="Bilan de sante">Bilan de santé</option>
+              <option value="Vaccination">Vaccination</option>
+              <option value="Urgence legere">Urgence légère</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="takeTicket()">🎫 Prendre un ticket</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TICKET ==================== -->
+  <div id="screen-ticket" class="screen">
+    <div class="top-header">
+      <div class="avatar" id="ticket-avatar">JD</div>
+      <div class="greeting">
+        <div class="hi">Votre ticket</div>
+        <div class="name" id="ticket-cabinet-name">Dr. Martin</div>
+      </div>
+      <button onclick="goToHome()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div class="screen-content">
+      <div class="ticket-display">
+        <div class="ticket-num" id="ticket-num">A12</div>
+        <div class="ticket-label">Numéro de ticket</div>
+      </div>
+
+      <div class="position-card">
+        <div class="row">
+          <div>
+            <div class="big" id="ticket-position">3</div>
+            <div class="label">personnes devant vous</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="wait-time">~<span id="ticket-wait">15</span> min</div>
+            <div class="label">temps estimé</div>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="ticket-progress" style="width:60%"></div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="row"><span class="key">Nom</span><span class="val" id="ticket-patient-name">Jean Dupont</span></div>
+        <div class="row"><span class="key">Motif</span><span class="val" id="ticket-reason">Consultation générale</span></div>
+        <div class="row"><span class="key">Arrivée</span><span class="val" id="ticket-time">10:42</span></div>
+        <div class="row"><span class="key">Cabinet</span><span class="val" id="ticket-cabinet">Dr. Martin</span></div>
+      </div>
+
+      <div class="alert-card">
+        <span class="bell">🔔</span>
+        <div class="txt">
+          Notification activée
+          <small>Vous serez alerté quand ce sera votre tour</small>
+        </div>
+      </div>
+
+      <button class="btn btn-danger" onclick="showCancelModal()">
+        ❌ Annuler mon ticket
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== PROFILE ==================== -->
+  <div id="screen-profile" class="screen">
+    <div class="top-header">
+      <div class="avatar" id="profile-avatar">JD</div>
+      <div class="greeting">
+        <div class="hi">Mon profil</div>
+        <div class="name" id="profile-name">Jean Dupont</div>
+      </div>
+    </div>
+    <div class="screen-content">
+      <div class="profile-avatar" id="profile-avatar-big">JD</div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <h3 id="profile-fullname" style="font-size:18px;">Jean Dupont</h3>
+        <p id="profile-email" style="font-size:13px;color:var(--text-light);">jean.dupont@email.com</p>
+      </div>
+
+      <div class="home-card">
+        <div class="card-title">Informations personnelles</div>
+        <div class="detail-card" style="margin:0;border:none;padding:8px 0;">
+          <div class="row"><span class="key">Nom</span><span class="val" id="profile-fullname2">Jean Dupont</span></div>
+          <div class="row"><span class="key">Email</span><span class="val" id="profile-email2">jean.dupont@email.com</span></div>
+          <div class="row"><span class="key">Téléphone</span><span class="val" id="profile-phone">06 12 34 56 78</span></div>
+        </div>
+      </div>
+
+      <div class="home-card">
+        <div class="card-title">Préférences</div>
+        <div class="detail-card" style="margin:0;border:none;padding:8px 0;">
+          <div class="row"><span class="key">Notifications push</span><span class="val" style="color:var(--success);">✓ Activées</span></div>
+          <div class="row"><span class="key">Langue</span><span class="val">Français</span></div>
+        </div>
+      </div>
+
+      <button class="btn btn-danger" onclick="handleLogout()" style="margin-top:8px;">
+        🚪 Se déconnecter
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== BOTTOM NAV ==================== -->
+  <div class="bottom-nav" id="bottom-nav" style="display:none;">
+    <button class="nav-item active" onclick="goToHome()" data-tab="home">
+      <span class="icon">🏠</span>Accueil
+    </button>
+    <button class="nav-item" onclick="goToScan()" data-tab="scan">
+      <span class="icon">📷</span>Scanner
+    </button>
+    <button class="nav-item" onclick="goToTicket()" data-tab="ticket">
+      <span class="icon">🎫</span>Ticket
+    </button>
+    <button class="nav-item" onclick="goToProfile()" data-tab="profile">
+      <span class="icon">👤</span>Profil
+    </button>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+  <div class="modal-overlay" id="modal-cancel" onclick="if(event.target===this)hideCancelModal()">
+    <div class="modal-box">
+      <div class="icon">⚠️</div>
+      <h3>Annuler le ticket ?</h3>
+      <p>Vous perdrez votre place dans la file d'attente.</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="hideCancelModal()">Non, garder</button>
+        <button class="btn btn-danger" onclick="confirmCancel()">Oui, annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST ==================== -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ==================== STATE ====================
+const state = {
+  user: null,
+  myTicket: null,
+  tickets: [],
+  history: [],
+  stats: {},
+  activity: [],
+  ws: null,
+  currentCabinet: null
+};
+
+const API_URL = 'http://localhost:3000/api';
+const WS_URL = 'ws://localhost:3000';
+
+// ==================== AUTH ====================
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('auth-' + tab).classList.add('active');
+}
+
+function togglePwd(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+async function apiRequest(endpoint, options = {}) {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers }
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Erreur réseau');
+  }
+  return response.json();
+}
+
+// ==================== LOGIN / REGISTER ====================
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) {
+    showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+  try {
+    const result = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    state.user = result.user;
+    enterApp();
+    showToast('✅ Connecté en tant que ' + result.user.name, 'success');
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+async function handleRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+
+  if (!name || !email || !password || !password2) {
+    showToast('Veuillez remplir tous les champs obligatoires (*)', 'error');
+    return;
+  }
+  if (password !== password2) {
+    showToast('Les mots de passe ne correspondent pas', 'error');
+    return;
+  }
+  if (password.length < 8) {
+    showToast('Le mot de passe doit faire au moins 8 caractères', 'error');
+    return;
+  }
+
+  try {
+    const result = await apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        email,
+        phone: phone || '',
+        password,
+        role: 'patient'  // <--- AJOUTER CE LIGNE
+      })
+    });
+    state.user = result.user;
+    enterApp();
+    showToast('🎉 Compte créé avec succès !', 'success');
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+function handleLogout() {
+  if (!confirm('Se déconnecter ?')) return;
+  state.user = null;
+  state.myTicket = null;
+  if (state.ws) state.ws.close();
+  document.getElementById('bottom-nav').style.display = 'none';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-auth').classList.add('active');
+  showToast('Déconnecté', 'success');
+}
+
+// ==================== NAVIGATION ====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function updateNav(tab) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const el = document.querySelector('.nav-item[data-tab="' + tab + '"]');
+  if (el) el.classList.add('active');
+}
+
+function goToHome() { showScreen('home'); updateNav('home'); updateHome(); }
+function goToScan() { showScreen('scan'); updateNav('scan'); }
+function goToTicket() {
+  if (!state.myTicket) {
+    showToast('Aucun ticket actif', 'warning');
+    goToHome();
+    return;
+  }
+  showScreen('ticket'); updateNav('ticket'); updateTicketView();
+}
+function goToProfile() { showScreen('profile'); updateNav('profile'); updateProfile(); }
+
+// ==================== ENTER APP ====================
+function enterApp() {
+  document.getElementById('bottom-nav').style.display = 'flex';
+  updateUserUI();
+  connectWebSocket();
+  refreshData();
+  goToHome();
+}
+
+function updateUserUI() {
+  if (!state.user) return;
+  const avatar = state.user.name.substring(0, 2).toUpperCase();
+  ['home', 'scan', 'ticket', 'profile'].forEach(s => {
+    const el = document.getElementById(s + '-avatar');
+    if (el) el.textContent = avatar;
+  });
+  document.getElementById('home-name').textContent = state.user.name;
+  document.getElementById('profile-name').textContent = state.user.name;
+  document.getElementById('profile-fullname').textContent = state.user.name;
+  document.getElementById('profile-fullname2').textContent = state.user.name;
+  document.getElementById('profile-email').textContent = state.user.email;
+  document.getElementById('profile-email2').textContent = state.user.email;
+  document.getElementById('profile-phone').textContent = state.user.phone || 'Non renseigné';
+  document.getElementById('profile-avatar-big').textContent = avatar;
+}
+
+// ==================== WEBSOCKET ====================
+function connectWebSocket() {
+  state.ws = new WebSocket(WS_URL);
+  state.ws.onopen = () => {
+    state.ws.send(JSON.stringify({ type: 'auth', userId: 'patient-' + Date.now() }));
+  };
+  state.ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'sync_response') {
+      state.tickets = data.data.tickets || [];
+      state.history = data.data.history || [];
+      state.stats = data.data.stats || {};
+      updateHome();
+      if (state.myTicket) updateTicketView();
+    }
+    if (data.type === 'ticket_created' || data.type === 'ticket_updated' || data.type === 'patient_called') {
+      refreshData();
+    }
+  };
+  state.ws.onclose = () => setTimeout(connectWebSocket, 3000);
+}
+
+// ==================== DATA ====================
+async function refreshData() {
+  try {
+    const [tickets, stats] = await Promise.all([
+      apiRequest('/tickets/waiting'),
+      apiRequest('/stats')
+    ]);
+    state.tickets = tickets;
+    state.stats = stats;
+    updateHome();
+    if (state.myTicket) updateTicketView();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// ==================== HOME ====================
+function updateHome() {
+  const waiting = state.tickets.filter(t => t.status === 'waiting');
+  document.getElementById('home-queue-count').textContent = waiting.length || 0;
+  
+  const avgWait = state.stats.avgWait || 0;
+  const waitTime = Math.round(avgWait * 1.2) || 5;
+  document.getElementById('home-wait').textContent = waitTime + ' min';
+  
+  const progress = Math.min(100, (waiting.length / 15) * 100);
+  document.getElementById('home-progress').style.width = Math.max(5, progress) + '%';
+
+  // History
+  const histEl = document.getElementById('home-history');
+  const history = state.tickets.filter(t => t.status === 'done' || t.status === 'cancelled');
+  if (history.length === 0) {
+    histEl.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Aucune visite récente</p></div>';
+  } else {
+    histEl.innerHTML = history.slice(0, 5).map(h => `
+      <div class="history-item">
+        <div class="num">A${String(h.ticket_number).padStart(2, '0')}</div>
+        <div class="info">
+          <div class="name">${h.cabinet_name || 'Cabinet'}</div>
+          <div class="meta">${h.reason} • ${formatTime(h.arrival_time)}</div>
+        </div>
+        <span class="badge-${h.status === 'done' ? 'done' : 'cancel'}">${h.status === 'done' ? 'Terminé' : 'Annulé'}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ==================== SCAN ====================
+function simulateScan() {
+  const success = document.getElementById('scan-success');
+  success.classList.add('active');
+  setTimeout(() => {
+    success.classList.remove('active');
+    state.currentCabinet = {
+      name: 'Dr. Martin - Médecine Générale',
+      addr: '12 Rue de la Santé, 75014 Paris'
+    };
+    document.getElementById('scan-cabinet-name').textContent = state.currentCabinet.name;
+    document.getElementById('scan-cabinet-addr').textContent = state.currentCabinet.addr;
+    document.getElementById('scan-cabinet').style.display = 'block';
+    showToast('✅ Cabinet détecté : ' + state.currentCabinet.name, 'success');
+  }, 1200);
+}
+
+async function takeTicket() {
+  const reason = document.getElementById('scan-reason').value;
+  if (!reason) {
+    showToast('Veuillez choisir un motif', 'warning');
+    return;
+  }
+  if (!state.currentCabinet) {
+    showToast('Scannez d\'abord un QR code', 'warning');
+    return;
+  }
+
+  try {
+    const result = await apiRequest('/tickets', {
+      method: 'POST',
+      body: JSON.stringify({
+        patient_name: state.user.name,
+        reason: reason,
+        cabinet_name: state.currentCabinet.name,
+        priority: 'normal'
+      })
+    });
+
+    state.myTicket = result;
+    document.getElementById('scan-cabinet').style.display = 'none';
+    document.getElementById('scan-reason').value = '';
+    document.getElementById('scan-cabinet').style.display = 'none';
+    state.currentCabinet = null;
+
+    goToTicket();
+    showToast('🎫 Ticket pris : A' + String(result.ticket_number).padStart(2, '0'), 'success');
+    refreshData();
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+// ==================== TICKET ====================
+function updateTicketView() {
+  if (!state.myTicket) return;
+  const t = state.myTicket;
+  document.getElementById('ticket-num').textContent = 'A' + String(t.ticket_number).padStart(2, '0');
+  document.getElementById('ticket-patient-name').textContent = t.patient_name || state.user.name;
+  document.getElementById('ticket-reason').textContent = t.reason;
+  document.getElementById('ticket-time').textContent = formatTime(t.arrival_time);
+  document.getElementById('ticket-cabinet').textContent = t.cabinet_name;
+  document.getElementById('ticket-cabinet-name').textContent = (t.cabinet_name || 'Cabinet').split(' - ')[0];
+
+  const waiting = state.tickets.filter(p => p.status === 'waiting');
+  const pos = waiting.findIndex(p => p.id === t.id) + 1;
+  const total = waiting.length;
+  const position = pos > 0 ? pos : total + 1;
+  
+  document.getElementById('ticket-position').textContent = position;
+  document.getElementById('ticket-wait').textContent = Math.max(5, position * 10);
+  document.getElementById('ticket-progress').style.width = Math.max(5, 100 - (position / Math.max(total, 1)) * 80) + '%';
+}
+
+function showCancelModal() {
+  document.getElementById('modal-cancel').classList.add('active');
+}
+function hideCancelModal() {
+  document.getElementById('modal-cancel').classList.remove('active');
+}
+async function confirmCancel() {
+  if (!state.myTicket) return;
+  try {
+    await apiRequest(`/tickets/${state.myTicket.id}`, { method: 'DELETE' });
+    state.myTicket = null;
+    hideCancelModal();
+    goToHome();
+    showToast('Ticket annulé', 'success');
+    refreshData();
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+// ==================== PROFILE ====================
+function updateProfile() {
+  updateUserUI();
+}
+
+// ==================== UTILS ====================
+function formatTime(ts) {
+  if (!ts) return '--:--';
+  return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type;
+  toast.classList.add('show');
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ==================== AUTO REFRESH ====================
+setInterval(refreshData, 15000);
+
+console.log('🏥 MediQueue - Interface Patient chargée !');
+console.log('📱 Accès : http://localhost:3000/patient.html');
+console.log('👤 Compte test : patient@test.fr / password123');
+</script>
+</body>
+</html>

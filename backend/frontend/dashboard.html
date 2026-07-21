@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediQueue - Dashboard Médecin</title>
+  <style>
+    :root {
+      --primary: #0ea5e9;
+      --primary-dark: #0284c7;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    
+    .auth-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%); }
+    .auth-box { width: 100%; max-width: 420px; background: white; padding: 40px; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+    .auth-logo { text-align: center; margin-bottom: 28px; }
+    .auth-logo .icon { width: 72px; height: 72px; border-radius: 22px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 32px; box-shadow: 0 10px 30px rgba(14,165,233,0.3); }
+    .auth-logo h1 { font-size: 26px; font-weight: 800; }
+    .auth-logo p { font-size: 14px; color: var(--text-light); }
+    
+    .auth-tabs { display: flex; gap: 0; margin-bottom: 24px; background: var(--bg); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
+    .auth-tab-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-light); transition: all 0.2s; }
+    .auth-tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-light); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: 14px; font-size: 15px; font-family: inherit; background: white; transition: border-color 0.2s; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+    .form-group .input-wrap { position: relative; }
+    .form-group .input-wrap .toggle-pwd { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-light); padding: 8px; }
+    
+    .btn { padding: 14px; border: none; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 16px rgba(14,165,233,0.3); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { background: white; border: 2px solid var(--border); color: var(--text); }
+    .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; }
+    .btn-block { width: 100%; }
+    
+    .divider { display: flex; align-items: center; margin: 20px 0; color: var(--text-light); font-size: 13px; font-weight: 600; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .divider span { padding: 0 12px; }
+    
+    .dashboard { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .dashboard.active { display: block; }
+    
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+    .header h1 { font-size: 24px; font-weight: 800; }
+    .user-pill { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--bg); border-radius: 20px; font-weight: 600; font-size: 13px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card); border-radius: 16px; padding: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .stat-icon.blue { background: #e0f2fe; }
+    .stat-icon.green { background: #dcfce7; }
+    .stat-icon.orange { background: #fef3c7; }
+    .stat-icon.red { background: #fee2e2; }
+    .stat-value { font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--text-light); }
+    
+    .action-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .action-bar .btn { width: auto; padding: 12px 20px; }
+    
+    .current-card { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-radius: 20px; padding: 28px; text-align: center; margin-bottom: 24px; box-shadow: 0 12px 40px rgba(14,165,233,0.25); }
+    .current-card.empty { background: linear-gradient(135deg, #94a3b8, #64748b); }
+    .current-ticket { font-size: 56px; font-weight: 900; line-height: 1; }
+    .current-name { font-size: 18px; font-weight: 700; }
+    .current-reason { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+    .current-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+    .current-actions .btn { width: auto; padding: 12px 24px; }
+    .btn-finish { background: white; color: var(--primary); }
+    .btn-recall { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+    
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--bg); padding: 4px; border-radius: 12px; width: fit-content; flex-wrap: wrap; }
+    .tab-btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: var(--text-light); transition: all 0.2s; }
+    .tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .queue-list { background: var(--card); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+    .queue-header { display: grid; grid-template-columns: 60px 1fr 1fr 80px 160px; gap: 12px; padding: 12px 16px; background: var(--bg); border-bottom: 2px solid var(--border); font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.04em; }
+    .queue-item { display: grid; grid-template-columns: 60px 1fr 1fr 80px 160px; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.2s; }
+    .queue-item:last-child { border-bottom: none; }
+    .queue-item:hover { background: var(--bg); }
+    .queue-item .ticket { font-weight: 700; font-size: 14px; color: var(--primary); }
+    .queue-item .name { font-weight: 600; font-size: 14px; }
+    .queue-item .reason { font-size: 13px; color: var(--text-light); }
+    .queue-item .wait-time { font-weight: 700; font-size: 14px; color: var(--warning); }
+    .queue-item .actions { display: flex; gap: 4px; flex-wrap: wrap; }
+    .urgent-badge { background: var(--danger); color: white; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; margin-left: 4px; }
+    
+    .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; }
+    .badge-waiting { background: #fef3c7; color: #92400e; }
+    .badge-called { background: #dcfce7; color: #166534; }
+    .badge-done { background: #e0f2fe; color: #0369a1; }
+    .badge-cancelled { background: #fee2e2; color: #991b1b; }
+    
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); font-weight: 700; border-bottom: 2px solid var(--border); }
+    td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+    tr:hover td { background: var(--bg); }
+    
+    .chart-bar { display: flex; align-items: flex-end; gap: 8px; height: 160px; padding: 8px 0; }
+    .chart-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .chart-item .bar { width: 100%; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--primary), var(--primary-dark)); transition: height 0.4s ease; min-height: 4px; }
+    .chart-item .bar-label { font-size: 11px; color: var(--text-light); font-weight: 600; }
+    .chart-item .bar-value { font-size: 11px; font-weight: 700; }
+    
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px); }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: var(--card); border-radius: 20px; padding: 28px; width: 100%; max-width: 440px; animation: modalIn 0.3s ease; }
+    @keyframes modalIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-box h3 { margin: 0 0 8px; font-size: 18px; }
+    .modal-box p { margin: 0 0 20px; font-size: 14px; color: var(--text-light); }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns .btn { flex: 1; }
+    
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; color: white; opacity: 0; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.warning { background: var(--warning); }
+    
+    .empty-state { text-align: center; padding: 40px; color: var(--text-light); }
+    .empty-state .icon { font-size: 40px; margin-bottom: 8px; opacity: 0.4; }
+    
+    .activity-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .activity-item:last-child { border-bottom: none; }
+    .act-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+    .act-text { font-size: 13px; font-weight: 500; }
+    .act-time { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+    
+    @media (max-width: 900px) {
+      .queue-header { display: none; }
+      .queue-item { grid-template-columns: 1fr; gap: 4px; padding: 14px 16px; }
+      .queue-item .ticket { font-size: 16px; }
+      .queue-item .actions { margin-top: 6px; justify-content: flex-start; }
+      .queue-item .wait-time { font-size: 14px; }
+    }
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .tabs { width: 100%; }
+      .tab-btn { flex: 1; text-align: center; }
+      .current-ticket { font-size: 36px; }
+      .auth-box { padding: 24px; }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 18px; }
+      .action-bar .btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== AUTH ==================== -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="icon">🏥</div>
+      <h1>MediQueue</h1>
+      <p>Dashboard Médecin</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" onclick="switchAuthTab('login')">🔐 Connexion</button>
+      <button class="auth-tab-btn" onclick="switchAuthTab('register')">📝 S'inscrire</button>
+    </div>
+
+    <!-- PANEL: LOGIN -->
+    <div id="auth-login" class="auth-panel active">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="dr.martin@cabinet.fr" value="dr.martin@cabinet.fr">
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <div class="input-wrap">
+          <input type="password" id="login-password" placeholder="••••••••" value="password123">
+          <button class="toggle-pwd" onclick="togglePwd('login-password')">👁️</button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="handleLogin()">🔐 Se connecter</button>
+    </div>
+
+    <!-- PANEL: REGISTER -->
+    <div id="auth-register" class="auth-panel">
+      <div class="form-group">
+        <label>Nom complet *</label>
+        <input type="text" id="reg-name" placeholder="Dr. Jean Martin">
+      </div>
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" id="reg-email" placeholder="dr.martin@cabinet.fr">
+      </div>
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="reg-phone" placeholder="01 23 45 67 89">
+      </div>
+      <div class="form-group">
+        <label>Nom du cabinet</label>
+        <input type="text" id="reg-cabinet" placeholder="Dr. Martin - Médecine Générale">
+      </div>
+      <div class="form-group">
+        <label>Adresse du cabinet</label>
+        <input type="text" id="reg-address" placeholder="12 Rue de la Santé, 75014 Paris">
+      </div>
+      <div class="form-group">
+        <label>Mot de passe * (8 caractères min)</label>
+        <div class="input-wrap">
+          <input type="password" id="reg-password" placeholder="••••••••">
+          <button class="toggle-pwd" onclick="togglePwd('reg-password')">👁️</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Confirmer le mot de passe *</label>
+        <div class="input-wrap">
+          <input type="password" id="reg-password2" placeholder="••••••••">
+          <button class="toggle-pwd" onclick="togglePwd('reg-password2')">👁️</button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="handleRegister()">📝 Créer mon compte</button>
+      <p style="text-align:center;font-size:12px;color:var(--text-light);margin-top:12px;">
+        En vous inscrivant, vous acceptez nos conditions d'utilisation
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DASHBOARD ==================== -->
+<div id="dashboard" class="dashboard">
+  <div class="header">
+    <h1>🏥 Tableau de bord</h1>
+    <div class="user-pill">
+      <div class="avatar" id="user-avatar">DM</div>
+      <span id="user-name">Dr. Martin</span>
+      <button onclick="handleLogout()" style="background:none;border:none;cursor:pointer;font-size:16px;">🚪</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon blue">🎫</div><div><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total aujourd'hui</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">👥</div><div><div class="stat-value" id="stat-waiting">0</div><div class="stat-label">En attente</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value" id="stat-done">0</div><div class="stat-label">Consultations</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">⏱</div><div><div class="stat-value" id="stat-avg">0m</div><div class="stat-label">Attente moyenne</div></div></div>
+  </div>
+
+  <!-- Actions -->
+  <div class="action-bar">
+    <button class="btn btn-success" onclick="openAddModal()">+ Ajouter un patient</button>
+    <button class="btn btn-primary" onclick="callNext()">▶ Appeler le suivant</button>
+    <button class="btn btn-outline" onclick="refreshData()">🔄 Actualiser</button>
+  </div>
+
+  <!-- Current Patient -->
+  <div class="current-card empty" id="current-card">
+    <div class="current-ticket" id="current-ticket">—</div>
+    <div class="current-name" id="current-name">Aucun patient</div>
+    <div class="current-reason" id="current-reason">Appuyez sur "Appeler le suivant"</div>
+    <div class="current-actions" id="current-actions" style="display:none;">
+      <button class="btn btn-finish" onclick="finishCurrent()">✅ Terminer</button>
+      <button class="btn btn-recall" onclick="recallCurrent()">🔊 Rappeler</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('queue')">🎫 File d'attente</button>
+    <button class="tab-btn" onclick="switchTab('history')">📋 Historique</button>
+    <button class="tab-btn" onclick="switchTab('stats')">📊 Statistiques</button>
+    <button class="tab-btn" onclick="switchTab('activity')">📝 Activité</button>
+  </div>
+
+  <!-- TAB: Queue -->
+  <div id="tab-queue" class="tab-content active">
+    <div style="margin-bottom:12px;font-weight:700;font-size:14px;color:var(--text-light);">
+      PATIENTS EN ATTENTE (<span id="queue-count">0</span>)
+    </div>
+    <div class="queue-list" id="queue-list">
+      <div class="queue-header">
+        <span>#</span>
+        <span>Nom</span>
+        <span>Motif</span>
+        <span>Attente</span>
+        <span>Actions</span>
+      </div>
+      <div id="queue-items">
+        <div class="empty-state" style="padding:30px;"><div class="icon">📋</div><p>Aucun patient en attente</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: History -->
+  <div id="tab-history" class="tab-content">
+    <div style="background:var(--card);border-radius:16px;border:1px solid var(--border);padding:16px;overflow-x:auto;">
+      <table>
+        <thead><tr><th>Ticket</th><th>Patient</th><th>Motif</th><th>Statut</th><th>Heure</th></tr></thead>
+        <tbody id="history-table">
+          <tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:30px;">Aucun historique</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Stats -->
+  <div id="tab-stats" class="tab-content">
+    <div style="background:var(--card);border-radius:16px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+      <h3 style="font-size:14px;color:var(--text-light);margin-bottom:12px;">Patients par heure (aujourd'hui)</h3>
+      <div class="chart-bar" id="hourly-chart"></div>
+    </div>
+    <div style="background:var(--card);border-radius:16px;border:1px solid var(--border);padding:20px;">
+      <h3 style="font-size:14px;color:var(--text-light);margin-bottom:12px;">Motifs de consultation</h3>
+      <div id="reasons-chart"></div>
+    </div>
+  </div>
+
+  <!-- TAB: Activity -->
+  <div id="tab-activity" class="tab-content">
+    <div style="background:var(--card);border-radius:16px;border:1px solid var(--border);padding:16px;" id="activity-log">
+      <div class="empty-state" style="padding:20px;"><p style="font-size:13px;">Aucune activité pour le moment</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD PATIENT -->
+<div class="modal-overlay" id="modal-add" onclick="if(event.target===this)closeModal('modal-add')">
+  <div class="modal-box">
+    <h3>👤 Ajouter un patient</h3>
+    <div class="form-group">
+      <label>Nom complet *</label>
+      <input type="text" id="add-name" placeholder="Jean Dupont">
+    </div>
+    <div class="form-group">
+      <label>Motif *</label>
+      <select id="add-reason">
+        <option value="Consultation generale">Consultation generale</option>
+        <option value="Renouvellement ordonnance">Renouvellement ordonnance</option>
+        <option value="Bilan de sante">Bilan de sante</option>
+        <option value="Vaccination">Vaccination</option>
+        <option value="Urgence legere">Urgence legere</option>
+        <option value="Autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Priorite</label>
+      <select id="add-priority">
+        <option value="normal">Normale</option>
+        <option value="urgent">🚨 Urgent</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('modal-add')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmAdd()">+ Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+let state = {
+  user: null,
+  tickets: [],
+  history: [],
+  stats: {},
+  currentPatient: null,
+  ws: null,
+  activity: []
+};
+
+const API_URL = 'http://localhost:3000/api';
+const WS_URL = 'ws://localhost:3000';
+
+// ==================== AUTH ====================
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('auth-' + tab).classList.add('active');
+}
+
+function togglePwd(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ==================== API ====================
+async function apiRequest(endpoint, options = {}) {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers }
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Erreur réseau');
+  }
+  return response.json();
+}
+
+// ==================== LOGIN ====================
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  
+  if (!email || !password) {
+    showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+  
+  try {
+    const result = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    state.user = result.user;
+    enterDashboard();
+    showToast('✅ Connecté en tant que ' + result.user.name, 'success');
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+// ==================== REGISTER ====================
+async function handleRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const cabinet = document.getElementById('reg-cabinet').value.trim();
+  const address = document.getElementById('reg-address').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+
+  if (!name || !email || !password || !password2) {
+    showToast('Veuillez remplir tous les champs obligatoires (*)', 'error');
+    return;
+  }
+  if (password !== password2) {
+    showToast('Les mots de passe ne correspondent pas', 'error');
+    return;
+  }
+  if (password.length < 8) {
+    showToast('Le mot de passe doit faire au moins 8 caractères', 'error');
+    return;
+  }
+
+  try {
+    const result = await apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        email,
+        phone: phone || '',
+        cabinet_name: cabinet || name + ' - Cabinet Médical',
+        cabinet_address: address || '',
+        password,
+        role: 'doctor'  // <--- AJOUTER CETTE LIGNE
+      })
+    });
+    state.user = result.user;
+    enterDashboard();
+    showToast('🎉 Compte créé avec succès ! Bienvenue ' + result.user.name, 'success');
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+// ==================== DASHBOARD ====================
+function enterDashboard() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('dashboard').classList.add('active');
+  document.getElementById('user-name').textContent = state.user.name;
+  document.getElementById('user-avatar').textContent = state.user.name.substring(0, 2).toUpperCase();
+  connectWebSocket();
+  refreshData();
+}
+
+function handleLogout() {
+  if (!confirm('Se déconnecter ?')) return;
+  state.user = null;
+  if (state.ws) state.ws.close();
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('auth-screen').style.display = 'flex';
+  // Réinitialiser les formulaires
+  document.getElementById('login-password').value = '';
+  document.getElementById('reg-password').value = '';
+  document.getElementById('reg-password2').value = '';
+  showToast('Déconnecté', 'success');
+}
+
+// ==================== WEBSOCKET ====================
+function connectWebSocket() {
+  state.ws = new WebSocket(WS_URL);
+  state.ws.onopen = () => {
+    state.ws.send(JSON.stringify({ type: 'auth', userId: 'doctor-' + Date.now() }));
+  };
+  state.ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'sync_response') {
+      state.tickets = data.data.tickets || [];
+      state.history = data.data.history || [];
+      state.stats = data.data.stats || {};
+      renderDashboard();
+    }
+  };
+  state.ws.onclose = () => setTimeout(connectWebSocket, 3000);
+}
+
+// ==================== DATA ====================
+async function refreshData() {
+  try {
+    const [tickets, stats] = await Promise.all([
+      apiRequest('/tickets/waiting'),
+      apiRequest('/stats')
+    ]);
+    state.tickets = tickets;
+    state.stats = stats;
+    state.currentPatient = tickets.find(t => t.status === 'called') || null;
+    renderDashboard();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// ==================== RENDER ====================
+function renderDashboard() {
+  renderStats();
+  renderCurrentPatient();
+  renderQueue();
+  renderHistory();
+  renderHourlyChart();
+  renderReasons();
+  renderActivity();
+}
+
+function renderStats() {
+  document.getElementById('stat-total').textContent = state.stats.totalToday || 0;
+  document.getElementById('stat-waiting').textContent = state.stats.waiting || 0;
+  document.getElementById('stat-done').textContent = state.stats.done || 0;
+  document.getElementById('stat-avg').textContent = (state.stats.avgWait || 0) + 'm';
+}
+
+function renderCurrentPatient() {
+  const card = document.getElementById('current-card');
+  if (state.currentPatient) {
+    card.classList.remove('empty');
+    document.getElementById('current-ticket').textContent = 'A' + String(state.currentPatient.ticket_number).padStart(2, '0');
+    document.getElementById('current-name').textContent = state.currentPatient.patient_name;
+    document.getElementById('current-reason').textContent = state.currentPatient.reason;
+    document.getElementById('current-actions').style.display = 'flex';
+  } else {
+    card.classList.add('empty');
+    document.getElementById('current-ticket').textContent = '—';
+    document.getElementById('current-name').textContent = 'Aucun patient';
+    document.getElementById('current-reason').textContent = 'Appuyez sur "Appeler le suivant"';
+    document.getElementById('current-actions').style.display = 'none';
+  }
+}
+
+function renderQueue() {
+  const container = document.getElementById('queue-items');
+  const count = document.getElementById('queue-count');
+  const waiting = state.tickets.filter(t => t.status === 'waiting');
+  count.textContent = waiting.length;
+  
+  if (waiting.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px;"><div class="icon">📋</div><p>Aucun patient en attente</p></div>';
+    return;
+  }
+  
+  container.innerHTML = waiting.map((t, index) => {
+    const waitMin = Math.round((Date.now() - new Date(t.arrival_time).getTime()) / 60000);
+    return `
+      <div class="queue-item">
+        <div class="ticket">A${String(t.ticket_number).padStart(2, '0')}</div>
+        <div class="name">${t.patient_name}${t.priority === 'urgent' ? '<span class="urgent-badge">URGENT</span>' : ''}</div>
+        <div class="reason">${t.reason}</div>
+        <div class="wait-time">${waitMin}m</div>
+        <div class="actions">
+          <button class="btn btn-success btn-sm" onclick="callPatient(${t.id})">▶ Appeler</button>
+          <button class="btn btn-outline btn-sm" onclick="skipPatient(${t.id})">⏭</button>
+          <button class="btn btn-danger btn-sm" onclick="cancelPatient(${t.id})">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderHistory() {
+  const tbody = document.getElementById('history-table');
+  const all = [...state.history, ...state.tickets.filter(t => t.status !== 'waiting')].sort((a, b) => 
+    new Date(b.arrival_time) - new Date(a.arrival_time)
+  );
+  if (all.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:30px;">Aucun historique</td></tr>';
+    return;
+  }
+  const statusLabels = { waiting: 'En attente', called: 'Appelé', done: 'Terminé', cancelled: 'Annulé' };
+  const statusClasses = { waiting: 'badge-waiting', called: 'badge-called', done: 'badge-done', cancelled: 'badge-cancelled' };
+  tbody.innerHTML = all.slice(0, 20).map(t => `
+    <tr>
+      <td><strong>A${String(t.ticket_number).padStart(2, '0')}</strong></td>
+      <td>${t.patient_name}</td>
+      <td>${t.reason}</td>
+      <td><span class="badge ${statusClasses[t.status] || 'badge-waiting'}">${statusLabels[t.status] || t.status}</span></td>
+      <td>${formatTime(t.arrival_time)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderHourlyChart() {
+  const hours = ['8h','9h','10h','11h','12h','14h','15h','16h','17h'];
+  const values = [2,4,7,10,5,3,8,9,6];
+  const max = Math.max(...values);
+  document.getElementById('hourly-chart').innerHTML = hours.map((h, i) => `
+    <div class="chart-item">
+      <div class="bar-value">${values[i]}</div>
+      <div class="bar" style="height:${(values[i]/max)*120}px;"></div>
+      <div class="bar-label">${h}</div>
+    </div>
+  `).join('');
+}
+
+function renderReasons() {
+  const counts = {};
+  state.tickets.forEach(t => { if (t.status === 'waiting') counts[t.reason] = (counts[t.reason] || 0) + 1; });
+  const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+  const colors = { 
+    'Consultation generale': '#0ea5e9', 
+    'Renouvellement ordonnance': '#22c55e', 
+    'Bilan de sante': '#f59e0b', 
+    'Vaccination': '#8b5cf6', 
+    'Urgence legere': '#ef4444', 
+    'Autre': '#94a3b8' 
+  };
+  const container = document.getElementById('reasons-chart');
+  if (Object.keys(counts).length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:20px;">Aucune donnée</div>';
+    return;
+  }
+  container.innerHTML = Object.entries(counts).map(([r, c]) => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="width:12px;height:12px;border-radius:50%;background:${colors[r] || '#94a3b8'};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:14px;font-weight:500;">${r}</span>
+      <span style="font-weight:700;font-size:14px;">${c} (${Math.round(c/total*100)}%)</span>
+      <div style="width:100px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;">
+        <div style="width:${(c/total)*100}%;height:100%;background:${colors[r] || '#94a3b8'};border-radius:4px;"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderActivity() {
+  const log = document.getElementById('activity-log');
+  if (state.activity.length === 0) {
+    log.innerHTML = '<div class="empty-state" style="padding:20px;"><p style="font-size:13px;">Aucune activité pour le moment</p></div>';
+    return;
+  }
+  log.innerHTML = state.activity.slice(0, 20).map(a => `
+    <div class="activity-item">
+      <div class="act-dot" style="background:${a.color || 'var(--primary)'};"></div>
+      <div>
+        <div class="act-text">${a.text}</div>
+        <div class="act-time">${a.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ==================== ACTIONS ====================
+async function callNext() {
+  const waiting = state.tickets.filter(t => t.status === 'waiting');
+  if (waiting.length === 0) {
+    showToast('Aucun patient en attente', 'warning');
+    return;
+  }
+  await callPatient(waiting[0].id);
+}
+
+async function callPatient(id) {
+  try {
+    await apiRequest(`/tickets/${id}/call`, { method: 'POST' });
+    addActivity('Patient appelé', 'var(--success)');
+    showToast('✅ Patient appelé', 'success');
+    await refreshData();
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+async function finishCurrent() {
+  if (!state.currentPatient) return;
+  try {
+    await apiRequest(`/tickets/${state.currentPatient.id}/finish`, { method: 'POST' });
+    addActivity('Consultation terminée - ' + state.currentPatient.patient_name, 'var(--primary)');
+    showToast('✅ Consultation terminée', 'success');
+    await refreshData();
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+function recallCurrent() {
+  if (!state.currentPatient) return;
+  showToast('🔊 Rappel effectué', 'success');
+  addActivity('Rappel pour ' + state.currentPatient.patient_name, 'var(--warning)');
+}
+
+async function skipPatient(id) {
+  try {
+    await apiRequest(`/tickets/${id}`, { 
+      method: 'PUT',
+      body: JSON.stringify({ status: 'waiting' })
+    });
+    addActivity('Patient passé à la fin', 'var(--warning)');
+    showToast('Patient passé à la fin', 'warning');
+    await refreshData();
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+async function cancelPatient(id) {
+  if (!confirm('Annuler ce ticket ?')) return;
+  try {
+    await apiRequest(`/tickets/${id}`, { method: 'DELETE' });
+    addActivity('Ticket annulé', 'var(--danger)');
+    showToast('Ticket annulé', 'success');
+    await refreshData();
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+// ==================== MODAL ====================
+function openAddModal() {
+  document.getElementById('modal-add').classList.add('active');
+  document.getElementById('add-name').focus();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+async function confirmAdd() {
+  const name = document.getElementById('add-name').value.trim();
+  const reason = document.getElementById('add-reason').value;
+  const priority = document.getElementById('add-priority').value;
+  if (!name) { showToast('Veuillez entrer un nom', 'error'); return; }
+  try {
+    await apiRequest('/tickets', {
+      method: 'POST',
+      body: JSON.stringify({
+        patient_name: name,
+        reason: reason,
+        cabinet_name: state.user?.cabinet_name || 'Cabinet Médical',
+        priority: priority
+      })
+    });
+    document.getElementById('add-name').value = '';
+    closeModal('modal-add');
+    addActivity('Patient ajouté - ' + name, 'var(--success)');
+    showToast('✅ Patient ajouté', 'success');
+    await refreshData();
+  } catch (error) {
+    showToast('❌ ' + error.message, 'error');
+  }
+}
+
+// ==================== TABS ====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick*="${tab}"]`)?.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ==================== UTILS ====================
+function formatTime(ts) {
+  if (!ts) return '--:--';
+  return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function addActivity(text, color = 'var(--primary)') {
+  state.activity.unshift({
+    text: text,
+    time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    color: color
+  });
+  if (state.activity.length > 50) state.activity.pop();
+  renderActivity();
+}
+
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type;
+  toast.classList.add('show');
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ==================== AUTO REFRESH ====================
+setInterval(refreshData, 15000);
+</script>
+</body>
+</html>
